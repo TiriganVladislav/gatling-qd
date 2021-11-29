@@ -1,7 +1,9 @@
 package plugin
 
 import io.gatling.core.session.Expression
+import plugin.action.QDClientRequestBuilderBase
 import plugin.check.QDClientCheckSupport
+import plugin.protocol.{QDClientProtocol, QDClientProtocolBuilder}
 
 object Predef extends QDClientCheckSupport {
   def qd(address: String): QDClientProtocol = QDClientProtocolBuilder(address)

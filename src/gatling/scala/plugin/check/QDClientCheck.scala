@@ -3,7 +3,7 @@ package plugin.check
 import io.gatling.commons.validation.Validation
 import io.gatling.core.check.{Check, CheckResult}
 import io.gatling.core.session.Session
-import plugin.QDClientResponse
+import plugin.action.QDClientResponse
 import plugin.check.QDClientCheck.{Scope, Status}
 
 import java.util.{Map => JMap}

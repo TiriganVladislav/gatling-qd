@@ -3,7 +3,7 @@ package plugin.check
 import com.devexperts.rmi.message.{RMIResponseMessage, RMIResponseType}
 import io.gatling.commons.validation.Validation
 import io.gatling.core.check.{CheckBuilder, CheckMaterializer, DefaultMultipleFindCheckBuilder, FindCheckBuilder, ValidatorCheckBuilder}
-import plugin.{QDClientResponse, ResponseTypeExtract}
+import plugin.action.QDClientResponse
 
 trait QDClientCheckSupport {
 

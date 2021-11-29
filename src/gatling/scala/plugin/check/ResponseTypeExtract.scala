@@ -1,10 +1,11 @@
-package plugin
+package plugin.check
 
 import com.devexperts.rmi.message.{RMIResponseMessage, RMIResponseType}
 import io.gatling.commons.validation.SuccessWrapper
 import io.gatling.core.Predef.value2Expression
 import io.gatling.core.check._
-import plugin.check.QDClientCheck
+import plugin.action.QDClientResponse
+import plugin.check
 
 object ResponseTypeExtract {
   val ResponseType: FindCheckBuilder[ResponseTypeExtract, RMIResponseMessage, RMIResponseType] =

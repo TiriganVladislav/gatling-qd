@@ -1,9 +1,10 @@
-package plugin
+package plugin.protocol
 
 import io.gatling.core.CoreComponents
 import io.gatling.core.config.GatlingConfiguration
 import io.gatling.core.protocol.{Protocol, ProtocolComponents, ProtocolKey}
 import io.gatling.core.session.{Session, SessionPrivateAttributes}
+import plugin.components.QDConnectionPool
 
 object QDClientProtocol {
   private val DefaultConnectionAttributeName: String = SessionPrivateAttributes.PrivateAttributePrefix + "qd.connection"

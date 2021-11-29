@@ -1,4 +1,4 @@
-package plugin
+package plugin.action
 
 import com.devexperts.rmi.{RMIRequest, RMIRequestListener}
 import com.typesafe.scalalogging.StrictLogging
@@ -12,6 +12,9 @@ import io.gatling.core.session.{Expression, Session}
 import io.gatling.core.stats.StatsEngine
 import io.gatling.core.structure.ScenarioContext
 import io.gatling.core.util.NameGen
+import plugin.check.ResponseTypeExtract
+import plugin.protocol.{QDClientComponents, QDClientProtocol}
+import plugin.components.QDConnection
 
 class QDClientAction[Res](builder: QDClientActionBuilder[Res],
                           ctx: ScenarioContext, override val next: Action) extends

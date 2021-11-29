@@ -1,7 +1,8 @@
 package plugin.check
 
 import io.gatling.core.check.{CheckMaterializer, Preparer}
-import plugin.{QDClientResponse, check}
+import plugin.action.QDClientResponse
+import plugin.check
 
 private[plugin] object ResponseMaterializers {
   def materializer[Res]: CheckMaterializer[ResponseExtract, QDClientCheck[Res], QDClientResponse[Res], Res] =

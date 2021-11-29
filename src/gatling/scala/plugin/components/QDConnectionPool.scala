@@ -1,4 +1,4 @@
-package plugin
+package plugin.components
 
 import akka.actor.ActorSystem
 import com.devexperts.rmi.RMIEndpoint
@@ -15,15 +15,11 @@ class QDConnectionPool(system: ActorSystem, statsEngine: StatsEngine, clock: Clo
   private val connections = new ConcurrentHashMap[Long, QDConnection]
 
   def newConnection(address: String, session: Session): QDConnection = {
-//    val key:Long = oneConnection match {
-//      case true => -1
-//      case false => session.userId
-//    }
 
     val key:Long = if(oneConnection)  -1 else session.userId
 
 
-    connections.computeIfAbsent(key, (key: Long) => {
+    connections.computeIfAbsent(key, (_: Long) => {
       val qdEndpoint = createEndpoint()
       qdEndpoint.endpoint.connect(address)
       qdEndpoint
@@ -35,10 +31,12 @@ class QDConnectionPool(system: ActorSystem, statsEngine: StatsEngine, clock: Clo
     builder.withName(connectionAttributeName)
     builder.withSide(RMIEndpoint.Side.CLIENT)
     val endpoint: RMIEndpoint = builder.build
-    val qdConn = new QDConnection(endpoint)
+    val qdConn = QDConnection(endpoint)
     qdConn
   }
 
   def close(): Unit = connections.values().asScala.foreach(_.endpoint.close())
 
 }
+
+case class QDConnection(endpoint: RMIEndpoint)

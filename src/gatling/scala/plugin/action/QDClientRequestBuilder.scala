@@ -1,13 +1,12 @@
-package plugin
+package plugin.action
 
 import com.devexperts.rmi.{RMIClient, RMIOperation, RMIRequest}
 import io.gatling.core.session.Expression
+import plugin.action
 
 import scala.reflect.{ClassTag, classTag}
-import scala.reflect.runtime.universe._
 
 //import scala.language.implicitConversions
-import io.gatling.core.Predef._
 
 case class QDClientRequestBuilderBase(private val requestName: Expression[String]) {
   def service(service: String) = QDClientRequestBuilderBase0(requestName, service)
@@ -39,7 +38,7 @@ case class QDClientRequestBuilderBase2[Res: ClassTag](private val requestName: E
       client.createRequest(subject, op, param1)
     }
 
-    QDClientActionBuilder(requestName, f)
+    action.QDClientActionBuilder(requestName, f)
   }
 
   def parameters[P1: ClassTag, P2: ClassTag](param1: P1,
@@ -51,7 +50,7 @@ case class QDClientRequestBuilderBase2[Res: ClassTag](private val requestName: E
       client.createRequest(subject, op, param1, param2)
     }
 
-    QDClientActionBuilder(requestName, f)
+    action.QDClientActionBuilder(requestName, f)
   }
 
   def parameters[P1: ClassTag, P2: ClassTag, P3: ClassTag](param1: P1,
@@ -65,7 +64,7 @@ case class QDClientRequestBuilderBase2[Res: ClassTag](private val requestName: E
       client.createRequest(subject, op, param1, param2, param3)
     }
 
-    QDClientActionBuilder(requestName, f)
+    action.QDClientActionBuilder(requestName, f)
   }
 
   def parameters[P1: ClassTag, P2: ClassTag, P3: ClassTag, P4: ClassTag](param1: P1,
@@ -83,7 +82,7 @@ case class QDClientRequestBuilderBase2[Res: ClassTag](private val requestName: E
       client.createRequest(subject, op, param1, param2, param3, param4)
     }
 
-    QDClientActionBuilder(requestName, f)
+    action.QDClientActionBuilder(requestName, f)
   }
 
   def parameters[P1: ClassTag, P2: ClassTag, P3: ClassTag, P4: ClassTag, P5: ClassTag](param1: P1,
@@ -102,6 +101,6 @@ case class QDClientRequestBuilderBase2[Res: ClassTag](private val requestName: E
       client.createRequest(subject, op, param1, param2, param3, param4, param5)
     }
 
-    QDClientActionBuilder(requestName, f)
+    action.QDClientActionBuilder(requestName, f)
   }
 }

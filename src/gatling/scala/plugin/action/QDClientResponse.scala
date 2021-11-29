@@ -1,6 +1,6 @@
-package plugin
+package plugin.action
 
-import com.devexperts.rmi.{RMIException, RMIExceptionType, RMIRequest}
+import com.devexperts.rmi.RMIException
 import com.devexperts.rmi.message.{RMIResponseMessage, RMIResponseType}
 import io.gatling.commons.validation.{Failure, Success, Validation}
 
