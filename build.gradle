@@ -1,0 +1,24 @@
+plugins {
+    id 'io.gatling.gradle' version "3.6.1"
+}
+
+group 'org.example'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+    maven{
+        url 'https://dxfeed.jfrog.io/artifactory/maven-open'
+    }
+}
+
+gatling{
+    simulations = {include "**simulations/TestSimulation.scala"}
+}
+
+dependencies {
+    gatlingImplementation 'com.devexperts.qd:qds:3.303'
+}
+
+test {
+}
