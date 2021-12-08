@@ -15,9 +15,7 @@ class QDConnectionPool(system: ActorSystem, statsEngine: StatsEngine, clock: Clo
   private val connections = new ConcurrentHashMap[Long, QDConnection]
 
   def newConnection(address: String, session: Session): QDConnection = {
-
-    val key:Long = if(oneConnection)  -1 else session.userId
-
+    val key: Long = if (oneConnection) -1 else session.userId
 
     connections.computeIfAbsent(key, (_: Long) => {
       val qdEndpoint = createEndpoint()
@@ -26,7 +24,7 @@ class QDConnectionPool(system: ActorSystem, statsEngine: StatsEngine, clock: Clo
     })
   }
 
-  private def createEndpoint():QDConnection = {
+  private def createEndpoint(): QDConnection = {
     val builder = RMIEndpoint.newBuilder
     builder.withName(connectionAttributeName)
     builder.withSide(RMIEndpoint.Side.CLIENT)
@@ -36,7 +34,6 @@ class QDConnectionPool(system: ActorSystem, statsEngine: StatsEngine, clock: Clo
   }
 
   def close(): Unit = connections.values().asScala.foreach(_.endpoint.close())
-
 }
 
 case class QDConnection(endpoint: RMIEndpoint)

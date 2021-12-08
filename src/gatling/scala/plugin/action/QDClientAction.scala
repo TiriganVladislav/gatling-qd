@@ -4,7 +4,7 @@ import com.devexperts.rmi.{RMIRequest, RMIRequestListener}
 import com.typesafe.scalalogging.StrictLogging
 import io.gatling.commons.stats.{KO, OK}
 import io.gatling.commons.util.Clock
-import io.gatling.commons.validation.{Success, Validation}
+import io.gatling.commons.validation.{Failure, Success, Validation}
 import io.gatling.core.action.{Action, RequestAction}
 import io.gatling.core.check.Check
 import io.gatling.core.protocol.ProtocolComponentsRegistry
@@ -44,47 +44,49 @@ class QDClientAction[Res](builder: QDClientActionBuilder[Res],
 
     val startTimestamp = clock.nowMillis
 
-    val reqOperation: RMIRequest[Res] = builder.f(connection.endpoint.getClient)
-    reqOperation.setListener(new RMIRequestListener() {
-      override def requestCompleted(request: RMIRequest[_]): Unit = {
-        val endTimestamp = clock.nowMillis
-        val res = request.getResponseMessage
-        val ex = request.getException()
-        val (checkSaveUpdated, checkError) = Check.check(QDClientResponse(res, ex), session,
-          resolvedChecks, preparedCache = null)
-        val status = if (checkError.isEmpty) OK else KO
-        val errorMessage = checkError.map(_.message)
+    val reqOperation: Validation[RMIRequest[Res]] = builder.f(connection.endpoint.getClient, session)
 
-        //        val responseStatus: RMIResponseType = res.getType()
-        //        if (responseStatus == RMIResponseType.SUCCESS) {
-        //          logger.info(responseStatus.toString)
-        //
-        //          val obj = res.getMarshalledResult().getObject().asInstanceOf[String]
-        //          //val obj1 = obj(0).asInstanceOf[String]
-        //          logger.info("Request completed!")
-        //          logger.info(obj)
-        //        }
-        //        else{
-        //          logger.error(request.getException.getMessage)
-        //        }
-        val newSession = {
-          val withStatus = if (status == KO) checkSaveUpdated.markAsFailed else checkSaveUpdated
-          statsEngine.logResponse(
-            withStatus.scenario,
-            withStatus.groups,
-            requestName,
-            startTimestamp = startTimestamp,
-            endTimestamp = endTimestamp,
-            status = status,
-            responseCode = Some(res.getType.toString),
-            message = errorMessage
-          )
-          withStatus.logGroupRequestTimings(startTimestamp = startTimestamp, endTimestamp = endTimestamp)
-        }
-        next ! newSession
+    reqOperation match {
+      case Success(request) => {
+        request.setListener(new RMIRequestListener() {
+          override def requestCompleted(request: RMIRequest[_]): Unit = {
+            val endTimestamp = clock.nowMillis
+            val res = request.getResponseMessage
+            val ex = request.getException()
+            val (checkSaveUpdated, checkError) = Check.check(QDClientResponse(res, ex), session,
+              resolvedChecks, preparedCache = null)
+            val status = if (checkError.isEmpty) OK else KO
+            val errorMessage = checkError.map(_.message)
+
+            val newSession = {
+              val withStatus = if (status == KO) checkSaveUpdated.markAsFailed else checkSaveUpdated
+              statsEngine.logResponse(
+                withStatus.scenario,
+                withStatus.groups,
+                requestName,
+                startTimestamp = startTimestamp,
+                endTimestamp = endTimestamp,
+                status = status,
+                responseCode = Some(res.getType.toString),
+                message = errorMessage
+              )
+              withStatus.logGroupRequestTimings(startTimestamp = startTimestamp, endTimestamp = endTimestamp)
+            }
+            next ! newSession
+          }
+        })
+        request.send()
       }
-    })
-    reqOperation.send()
+      case Failure(message) => statsEngine.logResponse(session.scenario,
+        session.groups,
+        requestName,
+        startTimestamp = startTimestamp,
+        endTimestamp = clock.nowMillis,
+        status = KO,
+        responseCode = Some("Invalid request"),
+        message = Some(message))
+    }
+
   }
 
   override def statsEngine: StatsEngine = ctx.coreComponents.statsEngine

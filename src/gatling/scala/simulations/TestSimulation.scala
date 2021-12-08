@@ -14,16 +14,24 @@ class TestSimulation extends Simulation {
     .method("")
     .returnType[String]
     .subject(null)
-    .parameters(1, 2, 3.0, "Hello ${userId}")
+    .parameters(1, 2, 3.0, s => {
+      val userId = s.userId
+      s"Hello ${userId}"
+    })
     //.check(substring("Hello").count.is(1))
     //.check(extract((_:String).some))
     //.extract(_.contains("Hellox").some)(_.saveAs("containsHello"))
-    .extract(_.contains("Hello").some)(_.find.is(false))
+    .extract(_.contains("Hello").some)(_.find.is(true))
 
 
   val testScenario = scenario("QDRMITestScenario")
     .forever(
       pace(1 second)
+        .exec(session => {
+          val newSession = session.set("userId", session.userId)
+          println(newSession)
+          newSession
+        })
         .exec(req)
         .exec(session => {
           println(session)

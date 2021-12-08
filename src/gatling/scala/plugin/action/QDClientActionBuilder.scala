@@ -1,15 +1,17 @@
 package plugin.action
 
 import com.devexperts.rmi.{RMIClient, RMIRequest}
+import io.gatling.commons.validation.Validation
 import io.gatling.core.action.Action
 import io.gatling.core.action.builder.ActionBuilder
 import io.gatling.core.protocol.ProtocolComponentsRegistry
-import io.gatling.core.session.Expression
+import io.gatling.core.session.{Expression, Session}
 import io.gatling.core.structure.ScenarioContext
 import plugin.check.{CallDefinition, QDClientCheck}
 import plugin.protocol.{QDClientComponents, QDClientProtocol}
 
-case class QDClientActionBuilder[Res](requestName: Expression[String], f: RMIClient => RMIRequest[Res],
+case class QDClientActionBuilder[Res](requestName: Expression[String],
+                                      f: (RMIClient, Session) => Validation[RMIRequest[Res]],
                                       private[plugin] override val checks: List[QDClientCheck[Res]] = Nil)
   extends ActionBuilder with CallDefinition[QDClientActionBuilder[Res], QDClientCheck, Res] {
 
