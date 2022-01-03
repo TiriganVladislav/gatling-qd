@@ -14,30 +14,34 @@ class TestSimulation extends Simulation {
     .method("")
     .returnType[String]
     .subject(null)
-    .parameters(1, 2, 3.0, s => {
-      val userId = s.userId
-      s"Hello ${userId}"
-    })
+    .parameters(session => session("someNumber").as[Long], 2, 3.0, session => s"Hello ${session.userId}")
     //.check(substring("Hello").count.is(1))
     //.check(extract((_:String).some))
     //.extract(_.contains("Hellox").some)(_.saveAs("containsHello"))
     .extract(_.contains("Hello").some)(_.find.is(true))
 
 
-  val testScenario = scenario("QDRMITestScenario")
-    .forever(
-      pace(1 second)
-        .exec(session => {
-          val newSession = session.set("userId", session.userId)
-          println(newSession)
-          newSession
-        })
+  val testScenario1 = scenario("QDRMITestScenario1")
+    .exec(session => session.set("someNumber", session.userId))
+    .repeat(10) {
+      exec(connect("QDConnect"))
         .exec(req)
-        .exec(session => {
-          println(session)
-          session
-        })
-    )
+        .pause(1 second)
+        .exec(disconnect("QDDisconnect"))
+        .pause(1 second)
+    }
 
-  setUp(testScenario.inject(atOnceUsers(1))).protocols(config).maxDuration(5 seconds)
+  val testScenario2 = scenario("QDRMITestScenario2")
+    .exec(session => session.set("someNumber", session.userId))
+    .repeat(10) {
+      exec(connect("QDConnect"))
+        .exec(req)
+        .exec(disconnect("QDDisconnect"))
+        .pause(5 second)
+    }
+
+  setUp(
+    testScenario1.inject(rampUsers(5) during (5 seconds)),
+    testScenario2.inject(rampUsers(10) during (10 seconds))
+  ).protocols(config)
 }

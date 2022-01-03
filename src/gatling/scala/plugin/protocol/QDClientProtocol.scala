@@ -28,7 +28,7 @@ object QDClientProtocol {
           DefaultConnectionAttributeName
         )
         coreComponents.actorSystem.registerOnTermination {
-          qdConnectionPool.close()
+          qdConnectionPool.disconnect()
         }
         new QDClientComponents(qdClientProtocol, qdConnectionPool)}
     }
@@ -48,7 +48,10 @@ case class QDClientProtocolBuilder(address: String) {
 final case class QDClientComponents(qdProtocol: QDClientProtocol, qdConnectionPool: QDConnectionPool) extends ProtocolComponents {
   override def onStart: Session => Session = Session.Identity
 
-  override def onExit: Session => Unit = ProtocolComponents.NoopOnExit
+  override def onExit: Session => Unit = session => {
+    val id = session.userId
+    qdConnectionPool.disconnect(id)
+  }
 }
 
 
