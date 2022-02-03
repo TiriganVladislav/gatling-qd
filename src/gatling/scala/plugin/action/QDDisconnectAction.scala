@@ -2,7 +2,7 @@ package plugin.action
 
 import com.devexperts.qd.qtp.{MessageConnector, MessageConnectorListener, MessageConnectorState, QDEndpoint}
 import com.devexperts.rmi.impl.RMIEndpointImpl
-import io.gatling.commons.stats.{KO, OK}
+import io.gatling.commons.stats.OK
 import io.gatling.commons.util.Clock
 import io.gatling.commons.validation.Validation
 import io.gatling.core.action.{Action, RequestAction}
@@ -12,11 +12,13 @@ import io.gatling.core.stats.StatsEngine
 import io.gatling.core.structure.ScenarioContext
 import io.gatling.core.util.NameGen
 import plugin.protocol.{QDClientComponents, QDClientProtocol}
+import plugin.utils.Utils
 
 
 case class QDDisconnectAction(builder: QDDisconnectBuilder, ctx: ScenarioContext, next: Action) extends RequestAction
   with NameGen {
   private[this] val qdClientComponents = components(ctx.protocolComponentsRegistry)
+  private val utils: Utils = Utils(statsEngine, clock, next)
 
   override def requestName: Expression[String] = builder.requestName
 
@@ -59,32 +61,17 @@ case class QDDisconnectAction(builder: QDDisconnectBuilder, ctx: ScenarioContext
             mc.stop()
           }
           else {
-            logFailedRequest(requestName, session, startTimestamp, "Already disconnected")
+            utils.logFailAndMoveOn(requestName, session, startTimestamp, "Already disconnected")
           }
         }
         else {
-          logFailedRequest(requestName, session, startTimestamp, "No connectors available")
+          utils.logFailAndMoveOn(requestName, session, startTimestamp, "No connectors available")
         }
       case _ =>
-        logFailedRequest(requestName, session, startTimestamp,
+        utils.logFailAndMoveOn(requestName, session, startTimestamp,
           s"Connection with id=${session.userId} doesn't exist")
     }
     Validation.unit
-  }
-
-  private def logFailedRequest(requestName: String, session: Session, startTimestamp: Long, message: String): Unit = {
-    statsEngine.logResponse(
-      session.scenario,
-      session.groups,
-      requestName,
-      startTimestamp = startTimestamp,
-      endTimestamp = clock.nowMillis,
-      status = KO,
-      responseCode = Some("KO"),
-      message = Some(message)
-    )
-    val newSession = session.markAsFailed
-    next ! newSession
   }
 
   override def statsEngine: StatsEngine = ctx.coreComponents.statsEngine

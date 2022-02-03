@@ -29,12 +29,13 @@ class TestSimulation extends Simulation {
   }
 
   val config = qd(address = "localhost:5555")
+    .withRMI
     .withStream
     .withTicker
     .withHistory
     .withScheme(scheme)
 
-  val req = rmirequest("RMIRequest")
+  val req = rmiRequest("RMIRequest")
     .service("echo2")
     .method("")
     .returnType[String]
@@ -105,10 +106,10 @@ class TestSimulation extends Simulation {
     .exec(disconnect("QDDisconnect"))
 
   setUp(
-    //testScenario1.inject(atOnceUsers(1)),
+    testScenario1.inject(atOnceUsers(1)),
     //testScenario1.inject(rampUsers(5) during (5 seconds)),
     //testScenario2.inject(rampUsers(10) during (10 seconds)),
-    testScenario5.inject(atOnceUsers(1))
+    //testScenario5.inject(atOnceUsers(1))
   ).protocols(config)
 
 

@@ -1,7 +1,7 @@
 package plugin.action
 
 import com.devexperts.qd.qtp.{MessageConnector, MessageConnectorListener, MessageConnectorState}
-import io.gatling.commons.stats.{KO, OK}
+import io.gatling.commons.stats.OK
 import io.gatling.commons.util.Clock
 import io.gatling.commons.validation.Validation
 import io.gatling.core.action.{Action, RequestAction}
@@ -11,18 +11,19 @@ import io.gatling.core.stats.StatsEngine
 import io.gatling.core.structure.ScenarioContext
 import io.gatling.core.util.NameGen
 import plugin.protocol.{QDClientComponents, QDClientProtocol}
+import plugin.utils.Utils
 import java.util
 
 
 case class QDConnectAction(builder: QDConnectBuilder, ctx: ScenarioContext, next: Action) extends RequestAction
   with NameGen {
   private[this] val qdClientComponents = components(ctx.protocolComponentsRegistry)
+  private val utils: Utils = Utils(statsEngine, clock, next)
 
   override def requestName: Expression[String] = builder.requestName
 
   override def sendRequest(requestName: String, session: Session): Validation[Unit] = {
     logger.debug("sendRequest called")
-    val address = qdClientComponents.qdProtocol.address
     val (qdEndpoint, rmiEndpoint) = qdClientComponents.qdConnectionPool.getOrCreateEndpoints(session)
     val startTimestamp = clock.nowMillis
 
@@ -55,37 +56,14 @@ case class QDConnectAction(builder: QDConnectBuilder, ctx: ScenarioContext, next
           mc.addMessageConnectorListener(listener)
           mc.start()
         case _ =>
-          logger.error(s"[${mc.getName}] Illegal state - ${mc.getState}")
-          statsEngine.logResponse(
-            session.scenario,
-            session.groups,
-            requestName,
-            startTimestamp = startTimestamp,
-            endTimestamp = clock.nowMillis,
-            status = KO,
-            responseCode = Some("KO"),
-            message = Some(s"Illegal state - ${mc.getState}")
-          )
-          val newSession = session.markAsFailed
-          next ! newSession
+          utils.logFailAndMoveOn(requestName, session, startTimestamp,
+            s"[${mc.getName}] Illegal state - ${mc.getState}")
       }
     }
-    else{
-      logger.error(s"[${session.userId}] No available connectors")
-      statsEngine.logResponse(
-        session.scenario,
-        session.groups,
-        requestName,
-        startTimestamp = startTimestamp,
-        endTimestamp = clock.nowMillis,
-        status = KO,
-        responseCode = Some("KO"),
-        message = Some("No available connectors")
-      )
-      val newSession = session.markAsFailed
-      next ! newSession
+    else {
+      utils.logFailAndMoveOn(requestName, session, startTimestamp,
+        s"[${session.userId}] No available connectors")
     }
-
     Validation.unit
   }
 

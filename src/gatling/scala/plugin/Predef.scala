@@ -12,7 +12,7 @@ object Predef extends QDClientCheckSupport {
 
   def disconnect(requestName: Expression[String]): QDDisconnectBuilder = QDDisconnectBuilder(requestName)
 
-  def rmirequest(requestName: Expression[String]): QDClientRequestBuilderBase =
+  def rmiRequest(requestName: Expression[String]): QDClientRequestBuilderBase =
     QDClientRequestBuilderBase(requestName)
 
   def stream(streamName: Expression[String]): QDStreamBuilder = QDStreamBuilder(streamName)

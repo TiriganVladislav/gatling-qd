@@ -14,6 +14,7 @@ import io.gatling.core.structure.ScenarioContext
 import io.gatling.core.util.NameGen
 import plugin.check.{QDClientResponse, ResponseTypeExtract}
 import plugin.protocol.{QDClientComponents, QDClientProtocol}
+import plugin.utils.Utils
 
 class QDRMIAction[Res](builder: QRMIActionBuilder[Res],
                        ctx: ScenarioContext, override val next: Action) extends
@@ -21,7 +22,8 @@ class QDRMIAction[Res](builder: QRMIActionBuilder[Res],
 
   private[this] val throttler = ctx.coreComponents.throttler
   private[this] val qdClientComponents = components(ctx.protocolComponentsRegistry)
-
+  private[this] val isRMIAllowed = qdClientComponents.qdProtocol.rmi
+  private val utils: Utils = Utils(statsEngine, clock, next)
   private[this] val resolvedChecks = if (builder.checks.exists(_.checkStatus)) builder.checks
   else ResponseTypeExtract.DefaultCheck :: builder.checks
 
@@ -33,71 +35,62 @@ class QDRMIAction[Res](builder: QRMIActionBuilder[Res],
     throttler.fold(
       sendAndLog(requestName, session))(_.throttle(session.scenario,
       () => sendAndLog(requestName, session)))
-    Success(true)
+    Validation.unit
   }
 
   def sendAndLog(requestName: String, session: Session): Unit = {
     val (qdEndpoint, rmiEndpoint) = qdClientComponents
-          .qdConnectionPool
-          .getOrCreateEndpoints(session)
+      .qdConnectionPool
+      .getOrCreateEndpoints(session)
     val startTimestamp = clock.nowMillis
-    if (rmiEndpoint.isConnected) {
-      val reqOperation: Validation[RMIRequest[Res]] = builder.f(rmiEndpoint.getClient, session)
+    if (isRMIAllowed) {
+      if (rmiEndpoint != null) {
+        if (rmiEndpoint.isConnected) {
+          val reqOperation: Validation[RMIRequest[Res]] = builder.f(rmiEndpoint.getClient, session)
 
-      reqOperation match {
-        case Success(request) =>
-          request.setListener(new RMIRequestListener() {
-            override def requestCompleted(request: RMIRequest[_]): Unit = {
-              val endTimestamp = clock.nowMillis
-              val res = request.getResponseMessage
-              val ex = request.getException()
-              val (checkSaveUpdated, checkError) = Check.check(QDClientResponse(res, ex), session,
-                resolvedChecks, preparedCache = null)
-              val status = if (checkError.isEmpty) OK else KO
-              val errorMessage = checkError.map(_.message)
+          reqOperation match {
+            case Success(request) =>
+              request.setListener(new RMIRequestListener() {
+                override def requestCompleted(request: RMIRequest[_]): Unit = {
+                  val endTimestamp = clock.nowMillis
+                  val res = request.getResponseMessage
+                  val ex = request.getException()
+                  val (checkSaveUpdated, checkError) = Check.check(QDClientResponse(res, ex), session,
+                    resolvedChecks, preparedCache = null)
+                  val status = if (checkError.isEmpty) OK else KO
+                  val errorMessage = checkError.map(_.message)
 
-              val newSession = {
-                val withStatus = if (status == KO) checkSaveUpdated.markAsFailed else checkSaveUpdated
-                statsEngine.logResponse(
-                  withStatus.scenario,
-                  withStatus.groups,
-                  requestName,
-                  startTimestamp = startTimestamp,
-                  endTimestamp = endTimestamp,
-                  status = status,
-                  responseCode = Some(res.getType.toString),
-                  message = errorMessage
-                )
-                withStatus.logGroupRequestTimings(startTimestamp = startTimestamp, endTimestamp = endTimestamp)
-              }
-              next ! newSession
-            }
-          })
-          request.send()
-        case Failure(message) =>
-          statsEngine.logResponse(session.scenario,
-            session.groups,
-            requestName,
-            startTimestamp = startTimestamp,
-            endTimestamp = clock.nowMillis,
-            status = KO,
-            responseCode = Some("KO"),
-            message = Some(message))
-          val newSession = session.markAsFailed
-          next ! newSession
+                  val newSession = {
+                    val withStatus = if (status == KO) checkSaveUpdated.markAsFailed else checkSaveUpdated
+                    statsEngine.logResponse(
+                      withStatus.scenario,
+                      withStatus.groups,
+                      requestName,
+                      startTimestamp = startTimestamp,
+                      endTimestamp = endTimestamp,
+                      status = status,
+                      responseCode = Some(res.getType.toString),
+                      message = errorMessage
+                    )
+                    withStatus.logGroupRequestTimings(startTimestamp = startTimestamp, endTimestamp = endTimestamp)
+                  }
+                  next ! newSession
+                }
+              })
+              request.send()
+            case Failure(message) =>
+              utils.logFailAndMoveOn(requestName, session, startTimestamp, message)
+          }
+        }
+        else {
+          utils.logFailAndMoveOn(requestName, session, startTimestamp, "Invalid request")
+        }
+      } else {
+        utils.logFailAndMoveOn(requestName, session, startTimestamp, "RMI endpoint is null")
       }
-    }
-    else {
-      statsEngine.logResponse(session.scenario,
-        session.groups,
-        requestName,
-        startTimestamp = startTimestamp,
-        endTimestamp = clock.nowMillis,
-        status = KO,
-        responseCode = Some("KO"),
-        message = Some("Invalid request"))
-      val newSession = session.markAsFailed
-      next ! newSession
+    } else {
+      utils.logFailAndMoveOn(requestName, session, startTimestamp,
+        "Not allowed to send RMI requests. Enable this feature in protocol settings.")
     }
   }
 
