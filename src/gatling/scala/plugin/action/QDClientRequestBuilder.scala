@@ -8,8 +8,6 @@ import plugin.action
 
 import scala.reflect.{ClassTag, classTag}
 
-//import scala.language.implicitConversions
-
 case class QDClientRequestBuilderBase(private val requestName: Expression[String]) extends ValidationImplicits {
   def service(service: String): QDClientRequestBuilderBase0 =
     QDClientRequestBuilderBase0(requestName, service)

@@ -1,7 +1,6 @@
 package plugin.check
 
 import io.gatling.core.check.{CheckMaterializer, Preparer}
-import plugin.action.QDClientResponse
 import plugin.check
 
 private[plugin] object ResponseMaterializers {

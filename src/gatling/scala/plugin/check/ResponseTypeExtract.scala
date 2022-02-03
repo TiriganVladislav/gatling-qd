@@ -4,7 +4,6 @@ import com.devexperts.rmi.message.{RMIResponseMessage, RMIResponseType}
 import io.gatling.commons.validation.SuccessWrapper
 import io.gatling.core.Predef.value2Expression
 import io.gatling.core.check._
-import plugin.action.QDClientResponse
 import plugin.check
 
 object ResponseTypeExtract {

@@ -1,25 +1,19 @@
 package plugin.components
 
 import akka.actor.ActorSystem
-import com.devexperts.qd.qtp.socket.SocketMessageAdapterFactory
-import com.devexperts.qd.{DataScheme, QDAgent, QDCollector, QDContract, QDFactory, QDHistory, QDStream, QDTicker}
-import com.devexperts.qd.qtp.{AgentAdapter, DistributorAdapter, MessageConnectorState, MessageConnectors, QDEndpoint}
-import com.devexperts.rmi.impl.{RMIClientImpl, RMIEndpointImpl}
-import com.devexperts.rmi.{RMIEndpoint, RMIEndpointListener}
-import com.dxfeed.api.DXEndpoint
+import com.devexperts.qd.{QDAgent, QDContract}
+import com.devexperts.qd.qtp.{DistributorAdapter, MessageConnectors, QDEndpoint}
+import com.devexperts.rmi.impl.RMIEndpointImpl
+import com.devexperts.rmi.RMIEndpoint
 import com.typesafe.scalalogging.StrictLogging
 import io.gatling.commons.util.Clock
-import io.gatling.commons.validation.{Failure, Validation}
 import io.gatling.core.config.GatlingConfiguration
 import io.gatling.core.session.Session
 import io.gatling.core.stats.StatsEngine
 import plugin.protocol.QDClientProtocol
 
 import java.util
-import java.util.EnumSet
 import java.util.concurrent.ConcurrentHashMap
-import scala.Predef.->
-import scala.collection.mutable.ArrayBuffer
 import scala.jdk.CollectionConverters.CollectionHasAsScala
 
 class QDConnectionPool(system: ActorSystem,

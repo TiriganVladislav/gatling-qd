@@ -1,8 +1,6 @@
 package plugin.action
 
 import com.devexperts.qd.qtp.{MessageConnector, MessageConnectorListener, MessageConnectorState}
-import com.devexperts.rmi.impl.RMIEndpointImpl
-import com.devexperts.rmi.{RMIEndpoint, RMIEndpointListener}
 import io.gatling.commons.stats.{KO, OK}
 import io.gatling.commons.util.Clock
 import io.gatling.commons.validation.Validation
@@ -13,9 +11,8 @@ import io.gatling.core.stats.StatsEngine
 import io.gatling.core.structure.ScenarioContext
 import io.gatling.core.util.NameGen
 import plugin.protocol.{QDClientComponents, QDClientProtocol}
-
 import java.util
-import java.util.List
+
 
 case class QDConnectAction(builder: QDConnectBuilder, ctx: ScenarioContext, next: Action) extends RequestAction
   with NameGen {

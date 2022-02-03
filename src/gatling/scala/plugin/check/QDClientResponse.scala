@@ -1,4 +1,4 @@
-package plugin.action
+package plugin.check
 
 import com.devexperts.rmi.RMIException
 import com.devexperts.rmi.message.{RMIResponseMessage, RMIResponseType}

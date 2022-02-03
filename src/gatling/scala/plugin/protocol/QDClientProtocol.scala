@@ -6,9 +6,7 @@ import io.gatling.core.config.GatlingConfiguration
 import io.gatling.core.protocol.{Protocol, ProtocolComponents, ProtocolKey}
 import io.gatling.core.session.{Session, SessionPrivateAttributes}
 import plugin.components.QDConnectionPool
-
 import java.util
-import scala.jdk.CollectionConverters._
 
 object QDClientProtocol {
   private val DefaultConnectionAttributeName: String = SessionPrivateAttributes.PrivateAttributePrefix + "qd.connection"

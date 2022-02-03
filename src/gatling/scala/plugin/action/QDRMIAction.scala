@@ -1,6 +1,5 @@
 package plugin.action
 
-import com.devexperts.rmi.impl.RMIEndpointImpl
 import com.devexperts.rmi.{RMIRequest, RMIRequestListener}
 import com.typesafe.scalalogging.StrictLogging
 import io.gatling.commons.stats.{KO, OK}
@@ -13,7 +12,7 @@ import io.gatling.core.session.{Expression, Session}
 import io.gatling.core.stats.StatsEngine
 import io.gatling.core.structure.ScenarioContext
 import io.gatling.core.util.NameGen
-import plugin.check.ResponseTypeExtract
+import plugin.check.{QDClientResponse, ResponseTypeExtract}
 import plugin.protocol.{QDClientComponents, QDClientProtocol}
 
 class QDRMIAction[Res](builder: QRMIActionBuilder[Res],

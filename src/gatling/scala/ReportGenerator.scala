@@ -3,7 +3,7 @@ import io.gatling.core.config.GatlingPropertiesBuilder
 
 import java.io.File
 import java.nio.file.attribute.{BasicFileAttributes, FileTime}
-import java.nio.file.{Files, Path}
+import java.nio.file.Files
 import scala.math.Ordered.orderingToOrdered
 
 object ReportGenerator extends App {

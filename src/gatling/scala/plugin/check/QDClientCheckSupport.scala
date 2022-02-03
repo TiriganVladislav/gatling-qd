@@ -1,9 +1,8 @@
 package plugin.check
 
-import com.devexperts.rmi.message.{RMIResponseMessage, RMIResponseType}
+import com.devexperts.rmi.message.RMIResponseMessage
 import io.gatling.commons.validation.Validation
 import io.gatling.core.check.{CheckBuilder, CheckMaterializer, DefaultMultipleFindCheckBuilder, FindCheckBuilder, ValidatorCheckBuilder}
-import plugin.action.QDClientResponse
 
 trait QDClientCheckSupport {
 
