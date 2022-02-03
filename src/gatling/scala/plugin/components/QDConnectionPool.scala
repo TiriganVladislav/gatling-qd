@@ -32,7 +32,7 @@ class QDConnectionPool(system: ActorSystem,
   private val endpoints = new ConcurrentHashMap[Long, (QDEndpoint, RMIEndpointImpl)]
   private val agents = new ConcurrentHashMap[(Long, String), QDAgent]
 
-  def getOrCreateAgent(session: Session, name: String, contract: QDContract) = {
+  def getOrCreateAgent(session: Session, name: String, contract: QDContract): QDAgent = {
     val key: Long = if (qdProtocol.oneConnection) -1 else session.userId
     agents.computeIfAbsent((key, name), (_: (Long, String)) => {
       val e = endpoints.get(key)
@@ -58,7 +58,7 @@ class QDConnectionPool(system: ActorSystem,
     }
   }
 
-  def removeAgent(session: Session, name: String) = {
+  def removeAgent(session: Session, name: String): QDAgent = {
     val key: Long = if (qdProtocol.oneConnection) -1 else session.userId
     agents.remove((key, name))
   }
@@ -75,8 +75,8 @@ class QDConnectionPool(system: ActorSystem,
     val key: Long = if (qdProtocol.oneConnection) -1 else session.userId
     val endpoint = endpoints.remove(key)
     if (endpoint != null)
-      logger.debug(s"Connection with id=${key} removed")
-    else logger.warn(s"Connection with id=${key} is not present")
+      logger.debug(s"Connection with id=$key removed")
+    else logger.warn(s"Connection with id=$key is not present")
   }
 
   def getEndpoints(session: Session): Option[(QDEndpoint, RMIEndpointImpl)] = {
@@ -88,22 +88,22 @@ class QDConnectionPool(system: ActorSystem,
   }
 
   private def createEndpoints(id: Long): (QDEndpoint, RMIEndpointImpl) = {
-    logger.debug(s"[id=${id}] Creating endpoints")
+    logger.debug(s"[id=$id] Creating endpoints")
 
     def createQDEndpoint: QDEndpoint = if (qdProtocol.contracts == null) {
-      logger.debug(s"[id=${id}] Creating qd endpoint with no contracts")
+      logger.debug(s"[id=$id] Creating qd endpoint with no contracts")
       val qdEndpoint = QDEndpoint.newBuilder
-        .withName(s"${connectionAttributeName}-${id}")
+        .withName(s"${connectionAttributeName}-$id")
         .withScheme(qdProtocol.scheme)
         .build
       qdEndpoint
     }
     else {
-      logger.debug(s"[id=${id}] Creating qd endpoint with contracts")
+      logger.debug(s"[id=$id] Creating qd endpoint with contracts")
       val qdEndpoint = QDEndpoint.newBuilder
-        .withName(s"${connectionAttributeName}-${id}")
+        .withName(s"$connectionAttributeName-$id")
         .withScheme(qdProtocol.scheme)
-        .withContracts(util.EnumSet.copyOf(qdProtocol.contracts))
+        .withCollectors(util.EnumSet.copyOf(qdProtocol.contracts))
         .build
       if (qdProtocol.stream) qdEndpoint.getStream.setEnableWildcards(true)
       qdEndpoint
@@ -111,16 +111,16 @@ class QDConnectionPool(system: ActorSystem,
 
     val qdEndpoint: QDEndpoint = createQDEndpoint
     val factory = new DistributorAdapter.Factory(qdEndpoint, null)
-    val rmiEndpoint: RMIEndpointImpl = if (qdProtocol.rmi == true) {
-      logger.debug(s"[id=${id}] Adding rmi endpoint to qd endpoint")
+    val rmiEndpoint: RMIEndpointImpl = if (qdProtocol.rmi) {
+      logger.debug(s"[id=$id] Adding rmi endpoint to qd endpoint")
       val rmiEndpoint = new RMIEndpointImpl(RMIEndpoint.Side.CLIENT, qdEndpoint, factory, null)
       qdEndpoint.initializeConnectorsForAddress(qdProtocol.address)
       rmiEndpoint
     }
     else {
-      logger.debug(s"[id=${id}] Adding connector to qd endpoint")
+      logger.debug(s"[id=$id] Adding connector to qd endpoint")
       qdEndpoint.addConnectors(MessageConnectors.createMessageConnectors(
-        factory, qdProtocol.address, qdEndpoint.getRootStats()))
+        factory, qdProtocol.address, qdEndpoint.getRootStats))
       null
     }
     (qdEndpoint, rmiEndpoint)

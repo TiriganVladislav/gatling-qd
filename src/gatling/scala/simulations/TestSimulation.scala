@@ -1,7 +1,7 @@
 package simulations
 
 import com.devexperts.qd.ng.{RecordBuffer, RecordMode}
-import com.devexperts.qd.{DataScheme, QDContract, QDFactory}
+import com.devexperts.qd.DataScheme
 import io.gatling.core.Predef._
 import plugin.Predef._
 import servers.SampleScheme
@@ -10,7 +10,8 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 
 class TestSimulation extends Simulation {
-  val scheme = SampleScheme.getInstance()
+  val scheme: DataScheme = SampleScheme.getInstance()
+
   def createSubscription(session: Session, symbol: String): RecordBuffer = {
     val sub = RecordBuffer.getInstance(RecordMode.SUBSCRIPTION)
     val codec = scheme.getCodec
@@ -27,7 +28,11 @@ class TestSimulation extends Simulation {
     sub
   }
 
-  val config = qd(address = "localhost:5555").withStream.withTicker.withHistory.withScheme(scheme)
+  val config = qd(address = "localhost:5555")
+    .withStream
+    .withTicker
+    .withHistory
+    .withScheme(scheme)
 
   val req = rmirequest("RMIRequest")
     .service("echo2")
@@ -68,7 +73,7 @@ class TestSimulation extends Simulation {
       createHistorySubscription(session, "SPX")
     }))
     .pause(15 seconds)
-    .exec(history("SPXHistory").close)
+    .exec(history("SPXHistory").close())
     .pause(15 seconds)
     .exec(disconnect("QDDisconnect"))
 
@@ -89,13 +94,13 @@ class TestSimulation extends Simulation {
       createSubscription(session, "MSFT")
     }))
     .pause(30 seconds)
-    .exec(stream("IBMStream").close)
+    .exec(stream("IBMStream").close())
     .pause(10 seconds)
-    .exec(stream("MSFTStream").close)
+    .exec(stream("MSFTStream").close())
     .pause(10 seconds)
-    .exec(ticker("ORCLTicker").close)
+    .exec(ticker("ORCLTicker").close())
     .pause(10 seconds)
-    .exec(history("SPXHistory").close)
+    .exec(history("SPXHistory").close())
     .pause(10 seconds)
     .exec(disconnect("QDDisconnect"))
 

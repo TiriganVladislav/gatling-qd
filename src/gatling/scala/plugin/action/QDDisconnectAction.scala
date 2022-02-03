@@ -28,7 +28,7 @@ case class QDDisconnectAction(builder: QDDisconnectBuilder, ctx: ScenarioContext
     val startTimestamp = clock.nowMillis
     connection match {
       case Some((qdEndpoint, rmiEndpoint)) =>
-        val l = qdEndpoint.getConnectors()
+        val l = qdEndpoint.getConnectors
         logger.debug(s"Connector count = ${l.size()}")
         l.forEach(c => logger.debug(s"Connector name = ${c.getName}"))
         if (l.size() > 0) {
@@ -72,7 +72,7 @@ case class QDDisconnectAction(builder: QDDisconnectBuilder, ctx: ScenarioContext
     Validation.unit
   }
 
-  private def logFailedRequest(requestName: String, session: Session, startTimestamp: Long, message: String) = {
+  private def logFailedRequest(requestName: String, session: Session, startTimestamp: Long, message: String): Unit = {
     statsEngine.logResponse(
       session.scenario,
       session.groups,

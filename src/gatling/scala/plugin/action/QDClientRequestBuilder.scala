@@ -1,7 +1,7 @@
 package plugin.action
 
 import com.devexperts.rmi.{RMIClient, RMIOperation, RMIRequest}
-import io.gatling.commons.validation.{Validation}
+import io.gatling.commons.validation.Validation
 import io.gatling.core.ValidationImplicits
 import io.gatling.core.session._
 import plugin.action
@@ -11,13 +11,15 @@ import scala.reflect.{ClassTag, classTag}
 //import scala.language.implicitConversions
 
 case class QDClientRequestBuilderBase(private val requestName: Expression[String]) extends ValidationImplicits {
-  def service(service: String) = QDClientRequestBuilderBase0(requestName, service)
+  def service(service: String): QDClientRequestBuilderBase0 =
+    QDClientRequestBuilderBase0(requestName, service)
 
 }
 
 case class QDClientRequestBuilderBase0(private val requestName: Expression[String],
                                        private val service: String) {
-  def method(method: String) = QDClientRequestBuilderBase1(requestName, service, method)
+  def method(method: String): QDClientRequestBuilderBase1
+  = QDClientRequestBuilderBase1(requestName, service, method)
 }
 
 case class QDClientRequestBuilderBase1(private val requestName: Expression[String],
