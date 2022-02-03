@@ -10,15 +10,15 @@ import io.gatling.core.structure.ScenarioContext
 import plugin.check.{CallDefinition, QDClientCheck}
 import plugin.protocol.{QDClientComponents, QDClientProtocol}
 
-case class QDClientActionBuilder[Res](requestName: Expression[String],
-                                      f: (RMIClient, Session) => Validation[RMIRequest[Res]],
-                                      private[plugin] override val checks: List[QDClientCheck[Res]] = Nil)
-  extends ActionBuilder with CallDefinition[QDClientActionBuilder[Res], QDClientCheck, Res] {
+case class QRMIActionBuilder[Res](requestName: Expression[String],
+                                  f: (RMIClient, Session) => Validation[RMIRequest[Res]],
+                                  private[plugin] override val checks: List[QDClientCheck[Res]] = Nil)
+  extends ActionBuilder with CallDefinition[QRMIActionBuilder[Res], QDClientCheck, Res] {
 
   override def build(ctx: ScenarioContext, next: Action): Action =
-    new QDClientAction(this, ctx, next)
+    new QDRMIAction(this, ctx, next)
 
-  override def check(checks: QDClientCheck[Res]*): QDClientActionBuilder[Res] = {
+  override def check(checks: QDClientCheck[Res]*): QRMIActionBuilder[Res] = {
     copy(checks = this.checks ::: checks.toList)
   }
 

@@ -16,8 +16,8 @@ import io.gatling.core.util.NameGen
 import plugin.check.ResponseTypeExtract
 import plugin.protocol.{QDClientComponents, QDClientProtocol}
 
-class QDClientAction[Res](builder: QDClientActionBuilder[Res],
-                          ctx: ScenarioContext, override val next: Action) extends
+class QDRMIAction[Res](builder: QRMIActionBuilder[Res],
+                       ctx: ScenarioContext, override val next: Action) extends
   RequestAction with StrictLogging with NameGen {
 
   private[this] val throttler = ctx.coreComponents.throttler
@@ -38,12 +38,12 @@ class QDClientAction[Res](builder: QDClientActionBuilder[Res],
   }
 
   def sendAndLog(requestName: String, session: Session): Unit = {
-    val endpoint: RMIEndpointImpl = qdClientComponents
+    val (qdEndpoint, rmiEndpoint) = qdClientComponents
           .qdConnectionPool
-          .newEndpoint(session)
+          .getOrCreateEndpoints(session)
     val startTimestamp = clock.nowMillis
-    if (endpoint.isConnected) {
-      val reqOperation: Validation[RMIRequest[Res]] = builder.f(endpoint.getClient, session)
+    if (rmiEndpoint.isConnected) {
+      val reqOperation: Validation[RMIRequest[Res]] = builder.f(rmiEndpoint.getClient, session)
 
       reqOperation match {
         case Success(request) =>

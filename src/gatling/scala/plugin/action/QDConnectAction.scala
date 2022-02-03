@@ -1,5 +1,6 @@
 package plugin.action
 
+import com.devexperts.qd.qtp.{MessageConnector, MessageConnectorListener, MessageConnectorState}
 import com.devexperts.rmi.impl.RMIEndpointImpl
 import com.devexperts.rmi.{RMIEndpoint, RMIEndpointListener}
 import io.gatling.commons.stats.{KO, OK}
@@ -13,6 +14,9 @@ import io.gatling.core.structure.ScenarioContext
 import io.gatling.core.util.NameGen
 import plugin.protocol.{QDClientComponents, QDClientProtocol}
 
+import java.util
+import java.util.List
+
 case class QDConnectAction(builder: QDConnectBuilder, ctx: ScenarioContext, next: Action) extends RequestAction
   with NameGen {
   private[this] val qdClientComponents = components(ctx.protocolComponentsRegistry)
@@ -20,13 +24,15 @@ case class QDConnectAction(builder: QDConnectBuilder, ctx: ScenarioContext, next
   override def requestName: Expression[String] = builder.requestName
 
   override def sendRequest(requestName: String, session: Session): Validation[Unit] = {
+    logger.debug("sendRequest called")
     val address = qdClientComponents.qdProtocol.address
-    val endpoint: RMIEndpointImpl = qdClientComponents.qdConnectionPool
-          .newEndpoint(session)
+    val (qdEndpoint, rmiEndpoint) = qdClientComponents.qdConnectionPool.getOrCreateEndpoints(session)
     val startTimestamp = clock.nowMillis
-    val listener: RMIEndpointListener = new RMIEndpointListener {
-      override def stateChanged(rmiEndpoint: RMIEndpoint): Unit = {
-        if (endpoint.isConnected) {
+
+    val listener = new MessageConnectorListener {
+      override def stateChanged(connector: MessageConnector): Unit = {
+        logger.debug(s"Listener called. State - ${connector.getState}")
+        if (connector.getState == MessageConnectorState.CONNECTED) {
           val endTimestamp = clock.nowMillis
           statsEngine.logResponse(
             session.scenario,
@@ -38,14 +44,37 @@ case class QDConnectAction(builder: QDConnectBuilder, ctx: ScenarioContext, next
             responseCode = Some("OK"),
             message = null
           )
-          endpoint.removeEndpointListener(this)
+          connector.removeMessageConnectorListener(this)
           next ! session
         }
       }
     }
 
-    if (endpoint.isConnected) {
-      logger.error(s"[${endpoint.getName}] Already connected")
+    val l: util.List[MessageConnector] = qdEndpoint.getConnectors
+    if (l.size() > 0) {
+      val mc: MessageConnector = l.get(0)
+      mc.getState match {
+        case MessageConnectorState.DISCONNECTED =>
+          mc.addMessageConnectorListener(listener)
+          mc.start()
+        case _ =>
+          logger.error(s"[${mc.getName}] Illegal state - ${mc.getState}")
+          statsEngine.logResponse(
+            session.scenario,
+            session.groups,
+            requestName,
+            startTimestamp = startTimestamp,
+            endTimestamp = clock.nowMillis,
+            status = KO,
+            responseCode = Some("KO"),
+            message = Some(s"Illegal state - ${mc.getState}")
+          )
+          val newSession = session.markAsFailed
+          next ! newSession
+      }
+    }
+    else{
+      logger.error(s"[${session.userId}] No available connectors")
       statsEngine.logResponse(
         session.scenario,
         session.groups,
@@ -54,14 +83,10 @@ case class QDConnectAction(builder: QDConnectBuilder, ctx: ScenarioContext, next
         endTimestamp = clock.nowMillis,
         status = KO,
         responseCode = Some("KO"),
-        message = Some("Already connected")
+        message = Some("No available connectors")
       )
       val newSession = session.markAsFailed
       next ! newSession
-    }
-    else {
-      endpoint.addEndpointListener(listener)
-      endpoint.connect(address)
     }
 
     Validation.unit

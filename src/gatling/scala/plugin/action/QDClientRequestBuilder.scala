@@ -33,7 +33,7 @@ case class QDClientRequestBuilderBase2[Res: ClassTag](private val requestName: E
                                                       private val subject: Any = null) {
   def subject(subj: Any): QDClientRequestBuilderBase2[Res] = copy(subject = subj)
 
-  def parameters[P1: ClassTag](param1: Expression[P1]): QDClientActionBuilder[Res] = {
+  def parameters[P1: ClassTag](param1: Expression[P1]): QRMIActionBuilder[Res] = {
     val op = RMIOperation.valueOf(service, classTag[Res].runtimeClass.asInstanceOf[Class[Res]], method,
       classTag[P1].runtimeClass.asInstanceOf[Class[P1]])
     val f: (RMIClient, Session) => Validation[RMIRequest[Res]] = (client, session) => {
@@ -45,11 +45,11 @@ case class QDClientRequestBuilderBase2[Res: ClassTag](private val requestName: E
       }
     }
 
-    action.QDClientActionBuilder(requestName, f)
+    action.QRMIActionBuilder(requestName, f)
   }
 
   def parameters[P1: ClassTag, P2: ClassTag](param1: Expression[P1],
-                                             param2: Expression[P2]): QDClientActionBuilder[Res] = {
+                                             param2: Expression[P2]): QRMIActionBuilder[Res] = {
     val op = RMIOperation.valueOf(service, classTag[Res].runtimeClass.asInstanceOf[Class[Res]], method,
       classTag[P1].runtimeClass.asInstanceOf[Class[P1]],
       classTag[P2].runtimeClass.asInstanceOf[Class[P2]])
@@ -64,12 +64,12 @@ case class QDClientRequestBuilderBase2[Res: ClassTag](private val requestName: E
       }
     }
 
-    action.QDClientActionBuilder(requestName, f)
+    action.QRMIActionBuilder(requestName, f)
   }
 
   def parameters[P1: ClassTag, P2: ClassTag, P3: ClassTag](param1: Expression[P1],
                                                            param2: Expression[P2],
-                                                           param3: Expression[P3]): QDClientActionBuilder[Res] = {
+                                                           param3: Expression[P3]): QRMIActionBuilder[Res] = {
     val op = RMIOperation.valueOf(service, classTag[Res].runtimeClass.asInstanceOf[Class[Res]], method,
       classTag[P1].runtimeClass.asInstanceOf[Class[P1]],
       classTag[P2].runtimeClass.asInstanceOf[Class[P2]],
@@ -86,14 +86,14 @@ case class QDClientRequestBuilderBase2[Res: ClassTag](private val requestName: E
       }
     }
 
-    action.QDClientActionBuilder(requestName, f)
+    action.QRMIActionBuilder(requestName, f)
   }
 
   def parameters[P1: ClassTag, P2: ClassTag, P3: ClassTag, P4: ClassTag](param1: Expression[P1],
                                                                          param2: Expression[P2],
                                                                          param3: Expression[P3],
                                                                          param4: Expression[P4]):
-  QDClientActionBuilder[Res] = {
+  QRMIActionBuilder[Res] = {
     val op = RMIOperation.valueOf(service, classTag[Res].runtimeClass.asInstanceOf[Class[Res]], method,
       classTag[P1].runtimeClass.asInstanceOf[Class[P1]],
       classTag[P2].runtimeClass.asInstanceOf[Class[P2]],
@@ -113,7 +113,7 @@ case class QDClientRequestBuilderBase2[Res: ClassTag](private val requestName: E
       }
     }
 
-    action.QDClientActionBuilder(requestName, f)
+    action.QRMIActionBuilder(requestName, f)
   }
 
   def parameters[P1: ClassTag, P2: ClassTag, P3: ClassTag, P4: ClassTag, P5: ClassTag](param1: Expression[P1],
@@ -121,7 +121,7 @@ case class QDClientRequestBuilderBase2[Res: ClassTag](private val requestName: E
                                                                                        param3: Expression[P3],
                                                                                        param4: Expression[P4],
                                                                                        param5: Expression[P5]):
-  QDClientActionBuilder[Res] = {
+  QRMIActionBuilder[Res] = {
     val op = RMIOperation.valueOf(service, classTag[Res].runtimeClass.asInstanceOf[Class[Res]], method,
       classTag[P1].runtimeClass.asInstanceOf[Class[P1]],
       classTag[P2].runtimeClass.asInstanceOf[Class[P2]],
@@ -143,6 +143,6 @@ case class QDClientRequestBuilderBase2[Res: ClassTag](private val requestName: E
       }
     }
 
-    action.QDClientActionBuilder(requestName, f)
+    action.QRMIActionBuilder(requestName, f)
   }
 }
