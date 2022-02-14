@@ -79,6 +79,7 @@ class TestSimulation extends Simulation {
     .exec(disconnect("QDDisconnect"))
 
   val testScenario5 = scenario("QDRMITestScenario5")
+    .exec(session => session.set("someNumber", session.userId))
     .exec(connect("QDConnect"))
     .exec(stream("IBMStream").subscribe(session => {
       createSubscription(session, "IBM")
@@ -94,6 +95,8 @@ class TestSimulation extends Simulation {
     .exec(stream("MSFTStream").subscribe(session => {
       createSubscription(session, "MSFT")
     }))
+    .pause(10 second)
+    .exec(req)
     .pause(30 seconds)
     .exec(stream("IBMStream").close())
     .pause(10 seconds)
@@ -106,10 +109,10 @@ class TestSimulation extends Simulation {
     .exec(disconnect("QDDisconnect"))
 
   setUp(
-    testScenario1.inject(atOnceUsers(1)),
+    //testScenario1.inject(atOnceUsers(1)),
     //testScenario1.inject(rampUsers(5) during (5 seconds)),
     //testScenario2.inject(rampUsers(10) during (10 seconds)),
-    //testScenario5.inject(atOnceUsers(1))
+    testScenario5.inject(atOnceUsers(5))
   ).protocols(config)
 
 

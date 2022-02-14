@@ -24,42 +24,64 @@ class QDConnectionPool(system: ActorSystem,
                        connectionAttributeName: String)
   extends StrictLogging {
   private val endpoints = new ConcurrentHashMap[Long, (QDEndpoint, RMIEndpointImpl)]
-  private val agents = new ConcurrentHashMap[(Long, String), QDAgent]
+  private val agents = new ConcurrentHashMap[Long, ConcurrentHashMap[String, QDAgent]]
 
-  def getOrCreateAgent(session: Session, name: String, contract: QDContract): QDAgent = {
+  def getOrCreateAgent(session: Session, name: String, contract: QDContract): Either[String, QDAgent] = {
     val key: Long = if (qdProtocol.oneConnection) -1 else session.userId
-    agents.computeIfAbsent((key, name), (_: (Long, String)) => {
-      val e = endpoints.get(key)
-      if (e != null) {
-        contract match {
-          case QDContract.STREAM =>
-            e._1.getStream.agentBuilder().build()
-          case QDContract.TICKER =>
-            e._1.getTicker.agentBuilder().build()
-          case QDContract.HISTORY =>
-            e._1.getHistory.agentBuilder().build()
-          case _ => null
-        }
-      } else null
-    })
-  }
-
-  def getAgent(session: Session, name: String): Option[QDAgent] = {
-    val key: Long = if (qdProtocol.oneConnection) -1 else session.userId
-    agents.get((key, name)) match {
-      case a: QDAgent => Some(a)
-      case _ => None
+    val e = endpoints.get(key)
+    if (e != null) {
+      val agentBuilder = contract match {
+        case QDContract.STREAM => Some(e._1.getStream.agentBuilder())
+        case QDContract.TICKER => Some(e._1.getTicker.agentBuilder())
+        case QDContract.HISTORY => Some(e._1.getHistory.agentBuilder())
+        case _ => None
+      }
+      agentBuilder match {
+        case Some(value) =>
+          val nAgents = agents.computeIfAbsent(key, (_: Long) => {
+            val agent = value.build()
+            val namedAgents = new ConcurrentHashMap[String, QDAgent]()
+            namedAgents.put(name, agent)
+            namedAgents
+          })
+          val agent = nAgents.computeIfAbsent(name: String, (_: String) => {
+            value.build()
+          })
+          Right(agent)
+        case None =>
+          Left("Unable to create agent builder")
+      }
+    } else {
+      Left("Unable to create an agent. Endpoint is not valid")
     }
   }
 
-  def removeAgent(session: Session, name: String): QDAgent = {
+  def getAgent(session: Session, name: String): Either[String, QDAgent] = {
     val key: Long = if (qdProtocol.oneConnection) -1 else session.userId
-    agents.remove((key, name))
+    agents.get(key) match {
+      case namedAgents: ConcurrentHashMap[String, QDAgent] =>
+        val agent = namedAgents.get(name)
+        if (agent != null) Right(agent)
+        else Left(s"Agent not found. Name($name) is not present")
+      case _ => Left(s"Agent not found. Key($key) is not present.")
+    }
+  }
+
+  def removeAgent(session: Session, name: String): Either[String, QDAgent] = {
+    val key: Long = if (qdProtocol.oneConnection) -1 else session.userId
+    val namedAgents = agents.get(key)
+    if (namedAgents != null) {
+      val agent = namedAgents.remove(name)
+      if (agent != null) {
+        Right(agent)
+      } else Left(s"Could not remove agent. Agent with name=$name is not present")
+    } else {
+      Left(s"Could not remove agent. Agent with key=$key is not present")
+    }
   }
 
   def getOrCreateEndpoints(session: Session): (QDEndpoint, RMIEndpointImpl) = {
     val key: Long = if (qdProtocol.oneConnection) -1 else session.userId
-
     endpoints.computeIfAbsent(key, (_: Long) => {
       createEndpoints(key)
     })
@@ -121,16 +143,22 @@ class QDConnectionPool(system: ActorSystem,
   }
 
   def closeAll(): Unit = {
+    agents.values().asScala.foreach(_.values().asScala.foreach(_.close()))
+    agents.clear()
     endpoints.values().asScala.foreach(_._1.close())
     endpoints.clear()
   }
 
   def close(session: Session): (QDEndpoint, RMIEndpointImpl) = {
     val key: Long = if (qdProtocol.oneConnection) -1 else session.userId
-    endpoints.computeIfPresent(key, (id, endpoints) => {
-      endpoints._1.close()
-      endpoints
-    })
+    val namedAgents = agents.get(key)
+    if (namedAgents != null) {
+      namedAgents.values().asScala.foreach(_.close())
+      namedAgents.clear()
+    }
+    agents.remove(key)
+    val e = endpoints.get(key)
+    if (e != null) e._1.close()
     endpoints.remove(key)
   }
 }

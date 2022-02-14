@@ -50,11 +50,12 @@ case class QDSubscribeAction(builder: QDSubscribeBuilder, ctx: ScenarioContext, 
   extends RequestAction with NameGen {
   private[this] val qdClientComponents = components(ctx.protocolComponentsRegistry)
   private val utils: Utils = Utils(statsEngine, clock, next)
-  private val buffer = new RecordBuffer
+
 
   override def requestName: Expression[String] = builder.name
 
   override def sendRequest(name: String, session: Session): Validation[Unit] = {
+    val buffer = new RecordBuffer
     logger.debug("Executing action")
     val contract = builder.contract
     val isContractAllowed = qdClientComponents.qdProtocol.contracts.contains(contract)
@@ -68,48 +69,51 @@ case class QDSubscribeAction(builder: QDSubscribeBuilder, ctx: ScenarioContext, 
           if (l.size() > 0) {
             val mc: MessageConnector = l.get(0)
             if (mc.getState == MessageConnectorState.CONNECTED) {
-              val agent = qdClientComponents
-                .qdConnectionPool
-                .getOrCreateAgent(session, name, contract)
+              val maybeAnAgent = qdClientComponents.qdConnectionPool.getOrCreateAgent(session, name, contract)
               val sub = builder.subscription(session)
               sub match {
-                case Success(subscription) => agent.setRecordListener(
-                  (provider: RecordProvider) => {
+                case Success(subscription) =>
+                  maybeAnAgent match {
+                    case Right(agent) =>
+                      agent.setRecordListener(
+                        (provider: RecordProvider) => {
+                          statsEngine.logResponse(
+                            session.scenario,
+                            session.groups,
+                            name + ".update",
+                            startTimestamp = clock.nowMillis,
+                            endTimestamp = clock.nowMillis,
+                            status = OK,
+                            responseCode = Some("OK"),
+                            message = null
+                          )
+                          buffer.clear()
+                          provider.retrieve(buffer)
+                          logger.whenDebugEnabled {
+                            logger.debug(s"Update received on ${builder.contract} with name=${name}. Details: ${utils.getStatsString(buffer)}")
+                          }
+                          logger.whenTraceEnabled {
+                            logger.trace(utils.getContentString(buffer))
+                          }
+                        })
 
-                    statsEngine.logResponse(
-                      session.scenario,
-                      session.groups,
-                      name + ".update",
-                      startTimestamp = clock.nowMillis,
-                      endTimestamp = clock.nowMillis,
-                      status = OK,
-                      responseCode = Some("OK"),
-                      message = null
-                    )
-                    buffer.clear()
-                    provider.retrieve(buffer)
-                    logger.whenDebugEnabled {
-                      logger.debug(s"Update received on ${builder.contract} with name=${name}. Details: ${utils.getStatsString(buffer)}")
-                    }
-                    logger.whenTraceEnabled {
-                      logger.trace(utils.getContentString(buffer))
-                    }
-                  })
-
-                  val startTimestamp = clock.nowMillis
-                  agent.setSubscription(subscription)
-                  statsEngine.logResponse(
-                    session.scenario,
-                    session.groups,
-                    name + ".subscribe",
-                    startTimestamp = startTimestamp,
-                    endTimestamp = clock.nowMillis,
-                    status = OK,
-                    responseCode = Some("OK"),
-                    message = null
-                  )
-                  subscription.release()
-                  next ! session
+                      val startTimestamp = clock.nowMillis
+                      agent.setSubscription(subscription)
+                      statsEngine.logResponse(
+                        session.scenario,
+                        session.groups,
+                        name + ".subscribe",
+                        startTimestamp = startTimestamp,
+                        endTimestamp = clock.nowMillis,
+                        status = OK,
+                        responseCode = Some("OK"),
+                        message = null
+                      )
+                      subscription.release()
+                      next ! session
+                    case Left(message) =>
+                      utils.logFailAndMoveOn(name, session, clock.nowMillis, message)
+                  }
                 case Failure(message) =>
                   utils.logFailAndMoveOn(name, session, clock.nowMillis, message)
               }
@@ -156,7 +160,7 @@ case class QDUnsubscribeAction(builder: QDUnsubscribeBuilder, ctx: ScenarioConte
     val agent = qdClientComponents.qdConnectionPool.getAgent(session, name)
 
     agent match {
-      case Some(a) =>
+      case Right(a) =>
         val startTimestamp = clock.nowMillis
         a.close()
         qdClientComponents.qdConnectionPool.removeAgent(session, name)
@@ -170,9 +174,10 @@ case class QDUnsubscribeAction(builder: QDUnsubscribeBuilder, ctx: ScenarioConte
           responseCode = Some("OK"),
           message = null
         )
+        qdClientComponents.qdConnectionPool.removeAgent(session, name)
         next ! session
-      case None =>
-        utils.logFailAndMoveOn(name + ".close", session, clock.nowMillis, "Agent is unavailable")
+      case Left(message) =>
+        utils.logFailAndMoveOn(name + ".close", session, clock.nowMillis, message)
     }
     Validation.unit
   }
