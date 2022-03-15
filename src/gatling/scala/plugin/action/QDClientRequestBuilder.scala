@@ -1,7 +1,7 @@
 package plugin.action
 
 import com.devexperts.rmi.{RMIClient, RMIOperation, RMIRequest}
-import io.gatling.commons.validation.Validation
+import io.gatling.commons.validation.{Success, Validation}
 import io.gatling.core.ValidationImplicits
 import io.gatling.core.session._
 import plugin.action
@@ -30,21 +30,21 @@ case class QDClientRequestBuilderBase1(private val requestName: Expression[Strin
 case class QDClientRequestBuilderBase2[Res: ClassTag](private val requestName: Expression[String],
                                                       private val service: String,
                                                       private val method: String,
-                                                      private val subject: Any = null) {
-  def subject(subj: Any): QDClientRequestBuilderBase2[Res] = copy(subject = subj)
+                                                      private val subject: Expression[Any] = null) {
+  def subject(subj: Expression[Any]): QDClientRequestBuilderBase2[Res] = copy(subject = subj)
 
   def parameters[P1: ClassTag](param1: Expression[P1]): QRMIActionBuilder[Res] = {
     val op = RMIOperation.valueOf(service, classTag[Res].runtimeClass.asInstanceOf[Class[Res]], method,
       classTag[P1].runtimeClass.asInstanceOf[Class[P1]])
     val f: (RMIClient, Session) => Validation[RMIRequest[Res]] = (client, session) => {
+      val subj = if (subject != null) subject(session) else null
       for {
         p1 <- param1(session)
       }
       yield {
-        client.createRequest(subject, op, p1)
+        client.createRequest(subj, op, p1)
       }
     }
-
     action.QRMIActionBuilder(requestName, f)
   }
 
@@ -55,15 +55,20 @@ case class QDClientRequestBuilderBase2[Res: ClassTag](private val requestName: E
       classTag[P2].runtimeClass.asInstanceOf[Class[P2]])
 
     val f: (RMIClient, Session) => Validation[RMIRequest[Res]] = (client, session) => {
+      val subj = if (subject != null) {
+        subject(session) match{
+          case Success(value) => value
+          case _ => null
+        }
+      } else null
       for {
         p1 <- param1(session)
         p2 <- param2(session)
       }
       yield {
-        client.createRequest(subject, op, p1, p2)
+        client.createRequest(subj, op, p1, p2)
       }
     }
-
     action.QRMIActionBuilder(requestName, f)
   }
 
@@ -76,16 +81,21 @@ case class QDClientRequestBuilderBase2[Res: ClassTag](private val requestName: E
       classTag[P3].runtimeClass.asInstanceOf[Class[P3]])
 
     val f: (RMIClient, Session) => Validation[RMIRequest[Res]] = (client, session) => {
+      val subj = if (subject != null) {
+        subject(session) match{
+          case Success(value) => value
+          case _ => null
+        }
+      } else null
       for {
         p1 <- param1(session)
         p2 <- param2(session)
         p3 <- param3(session)
       }
       yield {
-        client.createRequest(subject, op, p1, p2, p3)
+        client.createRequest(subj, op, p1, p2, p3)
       }
     }
-
     action.QRMIActionBuilder(requestName, f)
   }
 
@@ -102,6 +112,12 @@ case class QDClientRequestBuilderBase2[Res: ClassTag](private val requestName: E
 
 
     val f: (RMIClient, Session) => Validation[RMIRequest[Res]] = (client, session) => {
+      val subj = if (subject != null) {
+        subject(session) match{
+          case Success(value) => value
+          case _ => null
+        }
+      } else null
       for {
         p1 <- param1(session)
         p2 <- param2(session)
@@ -109,10 +125,9 @@ case class QDClientRequestBuilderBase2[Res: ClassTag](private val requestName: E
         p4 <- param4(session)
       }
       yield {
-        client.createRequest(subject, op, p1, p2, p3, p4)
+        client.createRequest(subj, op, p1, p2, p3, p4)
       }
     }
-
     action.QRMIActionBuilder(requestName, f)
   }
 
@@ -131,6 +146,12 @@ case class QDClientRequestBuilderBase2[Res: ClassTag](private val requestName: E
 
 
     val f: (RMIClient, Session) => Validation[RMIRequest[Res]] = (client, session) => {
+      val subj = if (subject != null) {
+        subject(session) match{
+          case Success(value) => value
+          case _ => null
+        }
+      } else null
       for {
         p1 <- param1(session)
         p2 <- param2(session)
@@ -139,10 +160,9 @@ case class QDClientRequestBuilderBase2[Res: ClassTag](private val requestName: E
         p5 <- param5(session)
       }
       yield {
-        client.createRequest(subject, op, p1, p2, p3, p4, p5)
+        client.createRequest(subj, op, p1, p2, p3, p4, p5)
       }
     }
-
     action.QRMIActionBuilder(requestName, f)
   }
 }

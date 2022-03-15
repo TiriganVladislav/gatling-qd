@@ -40,7 +40,6 @@ case class QDDisconnectAction(builder: QDDisconnectBuilder, ctx: ScenarioContext
               logger.debug(s"Listener called. State - ${connector.getState}")
               if (connector.getState == MessageConnectorState.DISCONNECTED) {
                 mc.removeMessageConnectorListener(this)
-
                 val endTimestamp = clock.nowMillis
                 statsEngine.logResponse(
                   session.scenario,
