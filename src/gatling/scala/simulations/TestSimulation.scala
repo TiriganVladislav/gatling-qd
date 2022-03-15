@@ -2,6 +2,7 @@ package simulations
 
 import com.devexperts.qd.ng.{RecordBuffer, RecordMode}
 import com.devexperts.qd.DataScheme
+import com.devexperts.rmi.RMIOperation
 import io.gatling.core.Predef._
 import plugin.Predef._
 import servers.SampleScheme
@@ -35,28 +36,24 @@ class TestSimulation extends Simulation {
     .withHistory
     .withScheme(scheme)
 
-  val req = rmiRequest("RMIRequest")
-    .service("echo2")
-    .method("")
-    .returnType[String]
-    .subject(null)
-    .parameters(session => session("someNumber").as[Long], 2, 3.0,
-      session => s"Hello ${session.userId}")
+  val operation: RMIOperation[String] = RMIOperation.valueOf("echo2", classOf[String], "",
+    classOf[Long], classOf[Int], classOf[Double], classOf[String])
+  val req = rmiRequest("RMIRequest").operation(operation).subject(null)
+    .parameters(session => session("someNumber").as[Long], 2, 3.0, session => s"Hello ${session.userId}")
     //.check(substring("Hello").count.is(1))
     //.check(extract((_:String).some))
     //.extract(_.contains("Hellox").some)(_.saveAs("containsHello"))
     .extract(_.contains("Hello").some)(_.find.is(true))
 
-
   val testScenario1 = scenario("QDRMITestScenario1")
     .exec(session => session.set("someNumber", session.userId))
     .repeat(10) {
       exec(connect("QDConnect"))
-        .pause(10 second)
+        .pause(1 second)
         .exec(req)
-        .pause(10 second)
+        .pause(1 second)
         .exec(disconnect("QDDisconnect"))
-        .pause(10 second)
+        .pause(1 second)
     }
 
   val testScenario2 = scenario("QDRMITestScenario2")
@@ -112,7 +109,7 @@ class TestSimulation extends Simulation {
     //testScenario1.inject(atOnceUsers(1)),
     //testScenario1.inject(rampUsers(5) during (5 seconds)),
     //testScenario2.inject(rampUsers(10) during (10 seconds)),
-    testScenario5.inject(atOnceUsers(5))
+    testScenario1.inject(atOnceUsers(1))
   ).protocols(config)
 
 

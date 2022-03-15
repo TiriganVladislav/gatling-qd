@@ -16,6 +16,9 @@ import plugin.check.{QDClientResponse, ResponseTypeExtract}
 import plugin.protocol.{QDClientComponents, QDClientProtocol}
 import plugin.utils.Utils
 
+import scala.collection.mutable.ArrayBuffer
+import scala.util.control.Breaks.break
+
 class QDRMIAction[Res](builder: QRMIActionBuilder[Res],
                        ctx: ScenarioContext, override val next: Action) extends
   RequestAction with StrictLogging with NameGen {
@@ -39,22 +42,24 @@ class QDRMIAction[Res](builder: QRMIActionBuilder[Res],
   }
 
   def sendAndLog(requestName: String, session: Session): Unit = {
-    val (qdEndpoint, rmiEndpoint) = qdClientComponents
+    val (_, rmiEndpoint) = qdClientComponents
       .qdConnectionPool
       .getOrCreateEndpoints(session)
     val startTimestamp = clock.nowMillis
     if (isRMIAllowed) {
       if (rmiEndpoint != null) {
         if (rmiEndpoint.isConnected) {
-          val reqOperation: Validation[RMIRequest[Res]] = builder.f(rmiEndpoint.getClient, session)
-
-          reqOperation match {
-            case Success(request) =>
+          val client = rmiEndpoint.getClient
+          val subj = if (builder.subject != null) builder.subject(session) else null
+          val resolvedParams: Validation[Seq[Any]] = resolveParameters(session)
+          resolvedParams match {
+            case Success(value) =>
+              val request: RMIRequest[Res] = client.createRequest(subj, builder.operation, value: _*)
               request.setListener(new RMIRequestListener() {
                 override def requestCompleted(request: RMIRequest[_]): Unit = {
                   val endTimestamp = clock.nowMillis
                   val res = request.getResponseMessage
-                  val ex = request.getException()
+                  val ex = request.getException
                   val (checkSaveUpdated, checkError) = Check.check(QDClientResponse(res, ex), session,
                     resolvedChecks, preparedCache = null)
                   val status = if (checkError.isEmpty) OK else KO
@@ -78,8 +83,7 @@ class QDRMIAction[Res](builder: QRMIActionBuilder[Res],
                 }
               })
               request.send()
-            case Failure(message) =>
-              utils.logFailAndMoveOn(requestName, session, startTimestamp, message)
+            case Failure(message) => utils.logFailAndMoveOn(requestName, session, startTimestamp, message)
           }
         }
         else {
@@ -91,6 +95,24 @@ class QDRMIAction[Res](builder: QRMIActionBuilder[Res],
     } else {
       utils.logFailAndMoveOn(requestName, session, startTimestamp,
         "Not allowed to send RMI requests. Enable this feature in protocol settings.")
+    }
+  }
+
+  private def resolveParameters(session: Session): Validation[Seq[Any]] = {
+    var failureMessage: Validation[Any] = Validation.success
+    val params = ArrayBuffer.empty[Any]
+    for (param <- builder.parameters) {
+      val resolvedParam: Validation[Any] = param(session)
+      resolvedParam match {
+        case Success(value) => params += value
+        case Failure(message) =>
+          failureMessage = Failure(message)
+          break
+      }
+    }
+    failureMessage match {
+      case Success(_) => Success(params.toSeq)
+      case Failure(message) => Failure(message)
     }
   }
 
